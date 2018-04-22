@@ -5,17 +5,21 @@ import java.security.MessageDigest;
 import com.google.gson.GsonBuilder;
 
 public class StringUtil {
-
     //Applies Sha256 to a string and returns the result.
-    public static String applySha256(String input) {
+    public static String applySha256(Object... input) {
+
+        StringBuilder inputString = new StringBuilder();
+        for (Object anInput : input) {
+            inputString.append(anInput);
+        }
 
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             //Applies sha256 to our input,
-            byte[] hash = digest.digest(input.getBytes("UTF-8"));
+            byte[] hash = digest.digest(inputString.toString().getBytes("UTF-8"));
 
-            StringBuffer hexString = new StringBuffer(); // This will contain hash as hexidecimal
+            StringBuilder hexString = new StringBuilder(); // This will contain hash as hexidecimal
             for (int i = 0; i < hash.length; i++) {
                 String hex = Integer.toHexString(0xff & hash[i]);
                 if (hex.length() == 1) hexString.append('0');
@@ -33,7 +37,7 @@ public class StringUtil {
     }
 
     //Returns difficulty string target, to compare to hash. eg difficulty of 5 will return "00000"
-    public static String getDificultyString(int difficulty) {
+    public static String getDifficultyString(int difficulty) {
         return new String(new char[difficulty]).replace('\0', '0');
     }
 
