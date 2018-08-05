@@ -1,6 +1,9 @@
 package no.maddin.noobchain;
 
+import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.GsonBuilder;
 import org.bouncycastle.util.encoders.Base64;
@@ -18,12 +21,14 @@ public class StringUtil {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             //Applies sha256 to our input,
-            byte[] hash = digest.digest(inputString.toString().getBytes("UTF-8"));
+            byte[] hash = digest.digest(inputString.toString().getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hexString = new StringBuilder(); // This will contain hash as hexidecimal
-            for (int i = 0; i < hash.length; i++) {
-                String hex = Integer.toHexString(0xff & hash[i]);
-                if (hex.length() == 1) hexString.append('0');
+            for (byte aHash : hash) {
+                String hex = Integer.toHexString(0xff & aHash);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
                 hexString.append(hex);
             }
             return hexString.toString();
@@ -46,18 +51,15 @@ public class StringUtil {
     //Applies ECDSA Signature and returns the result ( as bytes ).
     public static byte[] applyECDSASig(PrivateKey privateKey, String input) {
         Signature dsa;
-        byte[] output = new byte[0];
         try {
             dsa = Signature.getInstance("ECDSA", "BC");
             dsa.initSign(privateKey);
             byte[] strByte = input.getBytes();
             dsa.update(strByte);
-            byte[] realSig = dsa.sign();
-            output = realSig;
+            return dsa.sign();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return output;
     }
 
     //Verifies a String signature
@@ -75,4 +77,27 @@ public class StringUtil {
     public static String getStringFromKey(Key key) {
         return Base64.toBase64String(key.getEncoded());
     }
+
+    /**
+     * Tacks in array of transactions and returns a merkle root.
+     * This is an easy alternative to calculating the hash of the transaction list.
+     */
+    public static String getMerkleRoot(List<Transaction> transactions) {
+        int count = transactions.size();
+        List<String> previousTreeLayer = new ArrayList<>();
+        for(Transaction transaction : transactions) {
+            previousTreeLayer.add(transaction.getTransactionId());
+        }
+        List<String> treeLayer = previousTreeLayer;
+        while(count > 1) {
+            treeLayer = new ArrayList<>();
+            for(int i = 1; i < previousTreeLayer.size(); i++) {
+                treeLayer.add(applySha256(previousTreeLayer.get(i-1) + previousTreeLayer.get(i)));
+            }
+            count = treeLayer.size();
+            previousTreeLayer = treeLayer;
+        }
+        return (treeLayer.size() == 1) ? treeLayer.get(0) : "";
+    }
+
 }
